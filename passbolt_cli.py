@@ -198,7 +198,7 @@ def download_resource(api, resource_id, save_json=False, save_env=False):
     
     # Guardar como JSON si se solicita
     if save_json:
-        output_file = f"out/resource_{resource_id}.json"
+        output_file = f"out/{resource_id}.json"
         output_data = {
             "resource": resource,
             "decrypted_metadata": decrypted_metadata,
@@ -212,7 +212,7 @@ def download_resource(api, resource_id, save_json=False, save_env=False):
     
     # Guardar como ENV si se solicita
     if save_env:
-        output_file = f"out/resource_{resource_id}.env"
+        output_file = f"out/.env"
         
         # Extraer valores para el archivo .env
         name = ''
