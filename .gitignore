@@ -1,0 +1,32 @@
+# Archivos de configuración con credenciales
+.env
+
+# Archivos de salida
+resource_*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# GPG
+*.gpg
+*.asc
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
