@@ -32,8 +32,8 @@ def list_resources(api, limit=20, search=None):
         "contain[permission]=1"
     ])
     
-    if search:
-        params.append(f"filter[search]={search}")
+    # Nota: filter[search] no funciona con metadata cifrado en v5
+    # Haremos el filtro del lado del cliente después de descifrar
     
     if params:
         url += "?" + "&".join(params)
@@ -45,27 +45,83 @@ def list_resources(api, limit=20, search=None):
     response.raise_for_status()
     
     data = response.json()
-    resources = data['body']
+    all_resources = data['body']
     
-    print(f"✓ Se encontraron {len(resources)} recursos\n")
+    print(f"✓ Se obtuvieron {len(all_resources)} recursos del servidor")
+    
+    # Descifrar y filtrar recursos
+    filtered_resources = []
+    
+    if search:
+        print(f"→ Filtrando por: '{search}'...")
+        search_lower = search.lower()
+    
+    for resource in all_resources:
+        resource_id = resource.get('id', '')
+        
+        # Intentar obtener datos de metadata cifrado (v5) o campos directos (v4)
+        name = 'Sin nombre'
+        username = ''
+        uri = ''
+        description = ''
+        
+        # Si tiene metadata cifrado (v5), descifrarlo
+        if 'metadata' in resource and resource['metadata']:
+            try:
+                decrypted_metadata_str = api.decrypt_secret(resource['metadata'])
+                decrypted_metadata = json.loads(decrypted_metadata_str)
+                name = decrypted_metadata.get('name', 'Sin nombre')
+                username = decrypted_metadata.get('username', '')
+                description = decrypted_metadata.get('description', '')
+                uris = decrypted_metadata.get('uris', [])
+                if uris and len(uris) > 0:
+                    uri = uris[0].get('uri', '') if isinstance(uris[0], dict) else uris[0]
+            except Exception as e:
+                # Si falla el descifrado, usar valores por defecto
+                name = f"[Error descifrado]"
+        else:
+            # Fallback a campos directos (v4 o recursos sin metadata)
+            name = resource.get('name', 'Sin nombre')
+            username = resource.get('username', '')
+            uri = resource.get('uri', '')
+            description = resource.get('description', '')
+        
+        # Aplicar filtro de búsqueda (case-insensitive)
+        if search:
+            search_text = f"{name} {username} {uri} {description}".lower()
+            if search_lower not in search_text:
+                continue  # Saltar este recurso
+        
+        # Agregar a la lista filtrada
+        filtered_resources.append({
+            'id': resource_id,
+            'name': name,
+            'username': username,
+            'uri': uri
+        })
+    
+    # Aplicar límite
+    display_resources = filtered_resources[:limit]
+    
+    print(f"✓ Se encontraron {len(filtered_resources)} recursos que coinciden\n")
     print("=" * 100)
     print(f"{'ID':<38} {'Nombre':<30} {'Username':<20} {'URI':<20}")
     print("=" * 100)
     
-    for i, resource in enumerate(resources[:limit], 1):
-        resource_id = resource.get('id', '')
-        name = resource.get('name', 'Sin nombre')[:28]
-        username = resource.get('username', '')[:18]
-        uri = resource.get('uri', '')[:18]
+    for res in display_resources:
+        # Truncar para ajustar a la tabla
+        name_display = res['name'][:28]
+        username_display = res['username'][:18]
+        uri_display = res['uri'][:18]
         
-        print(f"{resource_id:<38} {name:<30} {username:<20} {uri:<20}")
+        print(f"{res['id']:<38} {name_display:<30} {username_display:<20} {uri_display:<20}")
     
-    if len(resources) > limit:
-        print(f"\n... y {len(resources) - limit} más")
+    if len(filtered_resources) > limit:
+        print(f"\n... y {len(filtered_resources) - limit} más")
     
     print("=" * 100)
     
-    return resources
+    return filtered_resources
 
 
 def download_resource(api, resource_id, save_json=False, save_env=False):

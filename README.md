@@ -15,7 +15,7 @@ Este proyecto proporciona una interfaz de línea de comandos (CLI) para interact
 
 ✅ Autenticación segura mediante GPGAuth (protocolo basado en cookies)  
 ✅ Descifrado automático de secretos y metadata  
-✅ Soporte para recursos v4 y v5 de Passbolt  
+✅ Soporte para recursos v5 de Passbolt  
 ✅ Exportación a múltiples formatos (JSON, .env)  
 ✅ Interfaz CLI intuitiva con búsqueda y filtros  
 ✅ Containerizado con Docker para portabilidad  
