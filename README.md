@@ -169,7 +169,7 @@ xYYEaRTeoRYJKwYBBAHaRw8BAQdAzIrjEhJK...
 PASSPHRASE=tu-passphrase-seguro
 
 # (Opcional) ID de recurso por defecto
-RESOURCE_ID=bd54ca48-d830-4181-ae4f-abab3006985d
+RESOURCE_ID=bd54ca48-d830-4181-ae4f-xxxxxxxxx
 ```
 
 ### Obtener tu clave privada PGP
