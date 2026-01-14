@@ -235,65 +235,7 @@ RESOURCE_ID=bd54ca48-d830-4181-ae4f-xxxxxxxxx
        │                                  │
 ```
 
-## 🔍 Formatos de Salida
 
-### Salida de Consola
-```
-==================================================================
-INFORMACIÓN DEL RECURSO
-==================================================================
-ID:          bd54ca48-d830-4181-ae4f-abab3006985d
-Nombre:      Database Production
-Username:    admin
-URI:         https://db.example.com
-Description: Credenciales de producción
-==================================================================
-
-→ Descifrando secreto...
-✓ Secreto descifrado correctamente
-
-==================================================================
-SECRETO DESCIFRADO
-==================================================================
-{
-    "password": "super-secret-password-123",
-    "description": "Credenciales de acceso a la BD"
-}
-==================================================================
-```
-
-### Formato .env
-```env
-# Recurso: Database Production
-# ID: bd54ca48-d830-4181-ae4f-abab3006985d
-# Descargado: 2026-01-12 10:30:45
-
-USERNAME=admin
-PASSWORD=super-secret-password-123
-URI=https://db.example.com
-DESCRIPTION=Credenciales de producción
-```
-
-### Formato JSON
-```json
-{
-    "resource_id": "bd54ca48-d830-4181-ae4f-abab3006985d",
-    "name": "Database Production",
-    "username": "admin",
-    "uri": "https://db.example.com",
-    "description": "Credenciales de producción",
-    "secret": {
-        "password": "super-secret-password-123",
-        "description": "Credenciales de acceso a la BD"
-    },
-    "metadata": {
-        "resource_type_id": "669f8c64-242a-59fb-92e5-...",
-        "created": "2024-05-22T10:15:30+00:00",
-        "modified": "2024-05-22T10:15:30+00:00"
-    },
-    "downloaded_at": "2026-01-12T10:30:45.123456"
-}
-```
 
 ## 🛠️ Desarrollo
 
@@ -344,6 +286,11 @@ python passbolt_cli.py --download <RESOURCE_ID>
 - Asegúrate de que Docker Desktop esté ejecutándose
 
 ## 📝 Ejemplos de Integración
+
+docker build -t ghcr.io/{{user}}/passbolt-env:latest .
+
+
+
 
 ### CI/CD Pipeline (GitHub Actions)
 ```yaml

@@ -202,6 +202,28 @@ class PassboltAPI:
             raise Exception(f"Error al descifrar secreto: {decrypted.status}")
         
         return str(decrypted)
+    
+    def get_resource_type_details(self, resource_type_id):
+        """
+        Obtiene información detallada de un tipo de recurso específico
+        
+        Args:
+            resource_type_id (str): ID del tipo de recurso
+            
+        Returns:
+            dict: Información del tipo de recurso incluyendo campos personalizados
+        """
+        url = f"{self.base_url}/resource-types/{resource_type_id}.json"
+        
+        print(f"\n→ Obteniendo información del tipo de recurso {resource_type_id}...")
+        
+        response = self.session.get(url)
+        response.raise_for_status()
+        
+        data = response.json()
+        print(f"✓ Información del tipo de recurso obtenida")
+        
+        return data['body']
 
 
 def main():

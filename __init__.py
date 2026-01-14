@@ -16,7 +16,6 @@ __author__ = "Refactorizado"
 from .config import config
 from .passbolt_fetch_resource import PassboltAPI
 from .services import ResourceService
-from .formatters import ResourceFormatter
 from .exceptions import (
     PassboltError,
     AuthenticationError, 
