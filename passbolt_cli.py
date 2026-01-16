@@ -9,6 +9,7 @@ import json
 import argparse
 from dotenv import load_dotenv
 from passbolt_fetch_resource import PassboltAPI
+from services import ResourceService
 
 # Cargar variables de entorno
 load_dotenv()
@@ -38,7 +39,7 @@ def list_resources(api, limit=20, search=None):
     if params:
         url += "?" + "&".join(params)
     
-    print(f"\n→ Listando recursos...")
+    print(f"\n> Listando recursos...")
     
     # Usar la sesión con cookie de autenticación
     response = api.session.get(url)
@@ -47,13 +48,13 @@ def list_resources(api, limit=20, search=None):
     data = response.json()
     all_resources = data['body']
     
-    print(f"✓ Se obtuvieron {len(all_resources)} recursos del servidor")
+    print(f"[OK] Se obtuvieron {len(all_resources)} recursos del servidor")
     
     # Descifrar y filtrar recursos
     filtered_resources = []
     
     if search:
-        print(f"→ Filtrando por: '{search}'...")
+        print(f"> Filtrando por: '{search}'...")
         search_lower = search.lower()
     
     for resource in all_resources:
@@ -103,7 +104,7 @@ def list_resources(api, limit=20, search=None):
     # Aplicar límite
     display_resources = filtered_resources[:limit]
     
-    print(f"✓ Se encontraron {len(filtered_resources)} recursos que coinciden\n")
+    print(f"[OK] Se encontraron {len(filtered_resources)} recursos que coinciden\n")
     print("=" * 100)
     print(f"{'ID':<38} {'Nombre':<30} {'Username':<20} {'URI':<20}")
     print("=" * 100)
@@ -123,7 +124,85 @@ def list_resources(api, limit=20, search=None):
     
     return filtered_resources
 
-def view_resource(api, resource_id):
+def view_resource(api, resource_id, save_json=False, save_env=False):
+    """Muestra la información de un recurso y opcionalmente guarda archivos."""
+    if not resource_id:
+        raise ValueError("No se proporcionó RESOURCE_ID. Pase --view RESOURCE_ID o defina RESOURCE_ID en el entorno.")
+
+    service = ResourceService(api)
+
+    # Obtener recurso y descifrados
+    resource, decrypted_metadata, decrypted_secret = service.get_resource_with_decrypted_content(resource_id)
+
+    # Mostrar información básica
+    print("\n[Recurso]")
+    print("-" * 70)
+    print(f"ID:          {resource.get('id')}")
+
+    if decrypted_metadata:
+        name = decrypted_metadata.get('name', 'N/A')
+        username = decrypted_metadata.get('username', 'N/A')
+        uris = decrypted_metadata.get('uris', [])
+        if uris and len(uris) > 0:
+            uri = uris[0].get('uri', 'N/A') if isinstance(uris[0], dict) else uris[0]
+        else:
+            uri = 'N/A'
+        description = decrypted_metadata.get('description', 'N/A')
+    else:
+        name = resource.get('name', 'N/A')
+        username = resource.get('username', 'N/A')
+        uri = resource.get('uri', 'N/A')
+        description = resource.get('description', 'N/A')
+
+    print(f"Nombre:      {name}")
+    print(f"Username:    {username}")
+    print(f"URI:         {uri}")
+    print(f"Descripción: {description}")
+    print(f"Tipo:        {resource.get('resource_type_id')}")
+    print(f"Creado:      {resource.get('created')}")
+    print(f"Modificado:  {resource.get('modified')}")
+
+    # Mostrar secreto si existe
+    if decrypted_secret is not None:
+        print("\n[Secreto]")
+        print("-" * 70)
+        if isinstance(decrypted_secret, dict) and 'custom_fields' in decrypted_secret:
+            # Mostrar custom fields con nombres si están disponibles
+            for field in decrypted_secret['custom_fields']:
+                field_name = field.get('field_name', f"Campo {field.get('id', 'desconocido')}")
+                field_value = field.get('secret_value', 'N/A')
+                print(f"{field_name}: {field_value}")
+        elif isinstance(decrypted_secret, dict) and 'value' not in decrypted_secret:
+            for k, v in decrypted_secret.items():
+                print(f"{k}: {v}")
+        else:
+            value = decrypted_secret.get('value') if isinstance(decrypted_secret, dict) else str(decrypted_secret)
+            print(value)
+
+    # Guardar archivos si se solicita
+    if save_json or save_env:
+        os.makedirs('out', exist_ok=True)
+
+    if save_json:
+        out_json_path = os.path.join('out', f"resource_{resource_id}.json")
+        with open(out_json_path, 'w', encoding='utf-8') as f:
+            json.dump({
+                'resource': resource,
+                'decrypted_metadata': decrypted_metadata,
+                'decrypted_secret': decrypted_secret
+            }, f, indent=2, ensure_ascii=False)
+        print(f"\n[OK] JSON guardado en: {out_json_path}")
+
+    if save_env:
+        out_env_path = os.path.join('out', f"resource_{resource_id}.env")
+        with open(out_env_path, 'w', encoding='utf-8') as f:
+            if isinstance(decrypted_secret, dict) and 'value' not in decrypted_secret:
+                for k, v in decrypted_secret.items():
+                    f.write(f"{k}={v}\n")
+            else:
+                value = decrypted_secret.get('value') if isinstance(decrypted_secret, dict) else (decrypted_secret or '')
+                f.write(f"SECRET={value}\n")
+        print(f"[OK] .env guardado en: {out_env_path}")
 
 
 
@@ -139,22 +218,25 @@ Ejemplos:
   # Listar recursos con búsqueda
   python passbolt_cli.py --list --search "password"
   
-  # Descargar un recurso específico en formato JSON
-  python passbolt_cli.py --download RESOURCE_ID --json
+  # Ver un recurso específico
+  python passbolt_cli.py --view RESOURCE_ID
   
-  # Descargar el recurso en formato ENV
-  python passbolt_cli.py --download RESOURCE_ID --env
+  # Ver y guardar JSON
+  python passbolt_cli.py --view RESOURCE_ID --json
   
-  # Descargar en ambos formatos
-  python passbolt_cli.py --download RESOURCE_ID -j -e
+  # Ver y guardar .env
+  python passbolt_cli.py --view RESOURCE_ID --env
+  
+  # Guardar ambos formatos
+  python passbolt_cli.py --view RESOURCE_ID -j -e
         """
     )
-    
+
     parser.add_argument('--list', '-l', action='store_true',
                         help='Listar todos los recursos disponibles')
     parser.add_argument('--search', '-s', type=str,
                         help='Buscar recursos por nombre/descripción')
-    parser.add_argument('--view', '-d', nargs='?', const=RESOURCE_ID,
+    parser.add_argument('--view', '-v', nargs='?', const=RESOURCE_ID,
                         help='Ver un recurso específico (usa RESOURCE_ID del config si no se especifica)')
     parser.add_argument('--limit', type=int, default=50,
                         help='Límite de recursos a mostrar en el listado (default: 50)')
@@ -162,40 +244,40 @@ Ejemplos:
                         help='Guardar el recurso en formato JSON en out/')
     parser.add_argument('--env', '-e', action='store_true',
                         help='Guardar el recurso en formato .env en out/')
-    
+
     args = parser.parse_args()
-    
+
     # Validar que se especificó al menos una acción
     if not any([args.list, args.view]):
         parser.print_help()
         return
-    
+
     print("=" * 70)
     print("PASSBOLT API CLIENT")
     print("=" * 70)
-    
+
     try:
         # Inicializar API
         api = PassboltAPI(PASSBOLT_URL, PRIVATE_KEY, PASSPHRASE)
-        
+
         # Login
-        print("\n→ Autenticando...")
+        print("\n> Autenticando...")
         api.login()
-        print("✓ Autenticación exitosa")
-        
+        print("[OK] Autenticación exitosa")
+
         # Ejecutar acción solicitada
         if args.list:
             list_resources(api, limit=args.limit, search=args.search)
-        
+
         if args.view:
-            view_resource(api, args.view)
-        
+            view_resource(api, args.view, save_json=args.json, save_env=args.env)
+
         print("\n" + "=" * 70)
-        print("✓ OPERACIÓN COMPLETADA")
+        print("[OK] OPERACIÓN COMPLETADA")
         print("=" * 70)
-        
+
     except Exception as e:
-        print(f"\n✗ Error: {e}")
+        print(f"\n[ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
 

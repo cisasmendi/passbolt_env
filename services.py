@@ -22,7 +22,7 @@ class ResourceService:
             try:
                 self._resource_types_cache = self.api.get_resource_types()
             except Exception as e:
-                print(f"⚠ No se pudieron cargar tipos de recursos: {e}")
+                print(f"[WARN] No se pudieron cargar tipos de recursos: {e}")
                 self._resource_types_cache = {}
         
         return self._resource_types_cache
@@ -43,30 +43,48 @@ class ResourceService:
         decrypted_metadata = None
         if 'metadata' in resource and resource['metadata']:
             try:
-                decrypted_metadata_str = self.api.decrypt_secret(resource['metadata'])
-                decrypted_metadata = json.loads(decrypted_metadata_str)
-                print(f"✓ Metadata descifrado")
+                decrypted_metadata = self.api.decrypt_metadata(resource)
+                if decrypted_metadata:
+                    print(f"[OK] Metadata descifrado")
+                else:
+                    print(f"[WARN] No se pudo descifrar metadata")
             except Exception as e:
-                print(f"⚠ No se pudo descifrar metadata: {e}")
+                print(f"[WARN] No se pudo descifrar metadata: {e}")
                 # No lanzar error, continuar con metadata nulo
         
         # Descifrar secreto
         decrypted_secret = None
+        field_mapping = {}
+        
         if 'secrets' in resource and resource['secrets']:
             secret_data = resource['secrets'][0].get('data') if isinstance(resource['secrets'], list) else resource['secrets'].get('data')
             
             if secret_data:
                 try:
                     secret_value_str = self.api.decrypt_secret(secret_data)
-                    print(f"✓ Secreto descifrado")
+                    print(f"[OK] Secreto descifrado")
                     # Intentar parsear como JSON
                     try:
                         decrypted_secret = json.loads(secret_value_str)
+                        
+                        # Si hay metadata descifrada y custom_fields, mapear nombres
+                        if decrypted_metadata and 'custom_fields' in decrypted_secret:
+                            field_mapping = self.api.extract_field_names_from_metadata(
+                                decrypted_metadata, 
+                                decrypted_secret['custom_fields']
+                            )
+                            
+                            # Añadir nombres de campo si están disponibles
+                            for field in decrypted_secret['custom_fields']:
+                                field_id = field.get('id')
+                                if field_id in field_mapping:
+                                    field['field_name'] = field_mapping[field_id]
+                                    
                     except json.JSONDecodeError:
                         # Si no es JSON válido, guardarlo como texto plano
                         decrypted_secret = {"value": secret_value_str}
                 except Exception as e:
-                    print(f"⚠ No se pudo descifrar secreto: {e}")
+                    print(f"[WARN] No se pudo descifrar secreto: {e}")
                     # No lanzar error, continuar con secreto nulo
         
         return resource, decrypted_metadata, decrypted_secret
@@ -118,17 +136,19 @@ class ResourceService:
         uri = ''
         description = ''
         
-        # Intentar descifrar metadata si existe (v5)
+        # Intentar descifrar metadata si existe (v4/v5)
         if 'metadata' in resource and resource['metadata']:
             try:
-                decrypted_metadata_str = self.api.decrypt_secret(resource['metadata'])
-                decrypted_metadata = json.loads(decrypted_metadata_str)
-                name = decrypted_metadata.get('name', 'Sin nombre')
-                username = decrypted_metadata.get('username', '')
-                description = decrypted_metadata.get('description', '')
-                uris = decrypted_metadata.get('uris', [])
-                if uris and len(uris) > 0:
-                    uri = uris[0].get('uri', '') if isinstance(uris[0], dict) else uris[0]
+                decrypted_metadata = self.api.decrypt_metadata(resource)
+                if decrypted_metadata:
+                    name = decrypted_metadata.get('name', 'Sin nombre')
+                    username = decrypted_metadata.get('username', '')
+                    description = decrypted_metadata.get('description', '')
+                    uris = decrypted_metadata.get('uris', [])
+                    if uris and len(uris) > 0:
+                        uri = uris[0].get('uri', '') if isinstance(uris[0], dict) else uris[0]
+                else:
+                    name = "[Metadata no accesible]"
             except Exception:
                 name = "[Error descifrado]"
         else:
