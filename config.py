@@ -24,8 +24,8 @@ class PassboltConfig:
         
         if not self.passbolt_url:
             missing.append('PASSBOLT_URL')
-        if not self.private_key:
-            missing.append('PRIVATE_KEY')
+        if not self.private_key and not os.getenv('PRIVATE_KEY_FILE'):
+            missing.append('PRIVATE_KEY o PRIVATE_KEY_FILE')
         if not self.passphrase:
             missing.append('PASSPHRASE')
             

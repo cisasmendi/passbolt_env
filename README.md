@@ -34,7 +34,7 @@ docker build -t passbolt-dwn .
 Lista todos los recursos disponibles en Passbolt:
 
 ```bash
-docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --list
+ docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --list
 ```
 
 **Salida:**
@@ -45,7 +45,7 @@ docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --list
 
 #### Formato JSON:
 ```bash
-docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --download RESOURCE_ID -j
+ docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID -j
 ```
 
 **Salida:**
@@ -53,7 +53,7 @@ docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --download R
 
 #### Formato ENV:
 ```bash
-docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --download RESOURCE_ID -e
+docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID -e
 ```
 
 **Salida:**
@@ -61,7 +61,7 @@ docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --download R
 
 #### Ambos Formatos:
 ```bash
-docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --download RESOURCE_ID -j -e
+docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID  -j -e
 ```
 
 **Salida:**
@@ -94,14 +94,15 @@ campo2="valor2"
 
 ### Workflow Típico
 
+
 1. **Listar recursos para encontrar el ID:**
    ```bash
-   docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --list
+   docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --list
    ```
 
 2. **Descargar recurso específico:**
    ```bash
-   docker run --rm -v ${PWD}/out:/app/out --env-file .env passbolt-dwn --download abc123-def456-ghi789 -e
+  docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download 6aea0e9e-d76f-493f-81eb-d7df370df425 -e
    ```
 
 3. **Usar las variables:**
@@ -110,19 +111,6 @@ campo2="valor2"
    echo $campo1
    ```
 
-### Con Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  passbolt-downloader:
-    build: .
-    volumes:
-      - ./out:/app/out
-    env_file:
-      - .env
-    command: ["--download", "RESOURCE_ID", "-e"]
-```
 
 ## Seguridad
 

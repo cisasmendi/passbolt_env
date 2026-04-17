@@ -31,4 +31,4 @@ build/
 .DS_Store
 Thumbs.db
 
-example.txt
+private.key
