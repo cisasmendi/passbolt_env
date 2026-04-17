@@ -1,10 +1,44 @@
+# Archivos de configuración local
+.env
+.env.*
+!.env.example
+
+# Directorio de salida
+out/
+
+# Archivos temporales de GPG
+.gnupg/
+
+# Archivos de Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Control de versiones
 .git/
 .gitignore
-*.json
-out/
-*.md
+
+# IDEs
 .vscode/
+
+# Documentación (excepto ejemplos)
+*.md
+!README.md
+
+# Archivos temporales y de salida del desarrollo
+*.tmp
+*.log
+*.json
+!apiPAssbolt.yaml
+
+# Archivos de salida del script anterior
+out.json
+.env.example_out

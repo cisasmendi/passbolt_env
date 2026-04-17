@@ -11,18 +11,16 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar scripts de la aplicación
-COPY passbolt_cli.py .
-COPY passbolt_fetch_resource.py .
+# Copiar código fuente
+COPY *.py .
 
 # Crear directorio de salida
-RUN mkdir -p out
+RUN mkdir -p /app/out
 
-# Configurar volumen para archivos de salida
-VOLUME ["/app/out"]
+# Hacer el script principal ejecutable
+RUN chmod +x main.py
 
 # Punto de entrada
-ENTRYPOINT ["python", "passbolt_cli.py"]
+ENTRYPOINT ["python", "main.py"]
 
-# Comando por defecto (mostrar ayuda)
-CMD ["--help"]
+
