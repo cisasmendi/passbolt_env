@@ -1,4 +1,4 @@
-# Passbolt CLI - Cliente Docker
+# Passbolt-dwn - Cliente Docker
 
 Cliente de línea de comandos para interactuar con Passbolt desde Docker. Permite listar y descargar recursos utilizando autenticación GPG.
 
