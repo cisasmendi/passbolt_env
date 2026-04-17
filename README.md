@@ -1,142 +1,204 @@
-# Passbolt-dwn - Cliente Docker
+# Passbolt-dwn - Docker Client
 
-Cliente de línea de comandos para interactuar con Passbolt desde Docker. Permite listar y descargar recursos utilizando autenticación GPG.
+Command-line client to interact with Passbolt from Docker. It allows listing and downloading resources using GPG authentication, with full support for custom fields and direct export to environment variables.
 
-## Requisitos Previos
+## Context and Motivation
 
-- Docker instalado
-- Clave GPG privada configurada en Passbolt
-- Acceso a una instancia de Passbolt
+This project was created in response to limitations found in **passbolt-cli**, especially in real-world operational scenarios:
 
-## Configuración
+- **Custom fields issue:**  
+  `passbolt-cli` has problems correctly retrieving and processing custom fields from resources. This becomes a limitation when secrets are not limited to standard fields (username/password), but distributed across multiple keys (tokens, endpoints, configs, etc.).
 
-1. **Copia el archivo de ejemplo de configuración:**
+- **Need for automation in production environments:**  
+  In production servers, it is common to:
+  - Inject credentials dynamically
+  - Avoid hardcoding secrets
+  - Integrate secrets into deployment pipelines
+
+  However, there was no simple tool that could:
+  - Download a complete resource from Passbolt
+  - Automatically transform it into environment variables (`.env`)
+  - Use it directly in processes like `docker run`, `docker-compose`, or shell scripts
+
+- **Portability and isolation:**  
+  Docker was chosen to avoid dependency issues, host GPG configuration complexity, and to simplify usage across different environments (CI/CD, VPS, clusters, etc.).
+
+**Passbolt-dwn** solves these problems by:
+- Accessing all resource fields (including custom ones)
+- Exporting them into automation-ready formats
+- Integrating easily into deployment and automation workflows
+
+---
+
+## Prerequisites
+
+- Docker installed
+- GPG private key configured in Passbolt
+- Access to a Passbolt instance
+
+## Configuration
+
+1. **Copy the example configuration file:**
    ```bash
    cp .env.example .env
    ```
 
-2. **Edita el archivo .env con tus credenciales:**
-   - `PASSBOLT_URL`: URL de tu instancia de Passbolt
-   - `PRIVATE_KEY`: Tu clave privada GPG completa
-   - `PASSPHRASE`: Passphrase de tu clave GPG
-   - `RESOURCE_ID`: (Opcional) ID del recurso por defecto
+2. **Edit the .env file with your credentials:**
+   - `PASSBOLT_URL`: URL of your Passbolt instance
+   - `PRIVATE_KEY`: Your full GPG private key
+   - `PASSPHRASE`: Passphrase of your GPG key
+   - `RESOURCE_ID`: (Optional) Default resource ID
 
-## Construcción de la Imagen
+---
+
+## Build the Image
 
 ```bash
 docker build -t passbolt-dwn .
 ```
 
-## Uso
+---
 
-### 1. Listar Recursos
+## Usage
 
-Lista todos los recursos disponibles en Passbolt:
+### 1. List Resources
 
 ```bash
- docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --list
+docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --list
 ```
 
-**Salida:**
-- Lista en consola con ID, nombre y URI de cada recurso
-- Archivo `out/resources_list.json` con la lista completa
+**Output:**
+- Console list with ID, name, and URI of each resource
+- `out/resources_list.json` file with the full list
 
-### 2. Descargar Recurso
+---
 
-#### Formato JSON:
+### 2. Download Resource
+
+#### JSON Format:
 ```bash
- docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID -j
+docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID -j
 ```
 
-**Salida:**
-- Archivo `out/resource_RESOURCE_ID.json` con todos los campos
+**Output:**
+- `out/resource_RESOURCE_ID.json` file with all fields (including custom ones)
 
-#### Formato ENV:
+#### ENV Format:
 ```bash
 docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID -e
 ```
 
-**Salida:**
-- Archivo `out/resource_RESOURCE_ID.env` listo para usar con `source` o `docker --env-file`
+**Output:**
+- `out/resource_RESOURCE_ID.env` file ready to use with `source`, `docker --env-file`, or CI/CD pipelines
 
-#### Ambos Formatos:
+#### Both Formats:
 ```bash
-docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID  -j -e
+docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID -j -e
 ```
 
-**Salida:**
-- Ambos archivos: `.json` y `.env`
+---
 
-## Estructura de Archivos de Salida
+## Common Use Cases
+
+### Inject environment variables into containers
+
+```bash
+docker run --env-file out/resource_xxx.env my_app
+```
+
+### Use in deployment scripts
+
+```bash
+source out/resource_xxx.env
+./deploy.sh
+```
+
+### CI/CD integration
+
+- Fetch secrets at runtime
+- Avoid storing them in repositories
+- Centralize credentials in Passbolt
+
+---
+
+## Output File Structure
 
 ### JSON Format (`resource_ID.json`)
 ```json
 {
-  "campo1": "valor1",
-  "campo2": "valor2",
-  "_resource_name": "Nombre del Recurso",
-  "_resource_id": "uuid-del-recurso",
-  "_resource_uri": "https://ejemplo.com"
+  "field1": "value1",
+  "field2": "value2",
+  "_resource_name": "Resource Name",
+  "_resource_id": "resource-uuid",
+  "_resource_uri": "https://example.com"
 }
 ```
 
 ### ENV Format (`resource_ID.env`)
 ```bash
-# Variables del recurso: Nombre del Recurso
-# Resource ID: uuid-del-recurso
-# Descargado: https://ejemplo.com
+# Resource variables: Resource Name
+# Resource ID: resource-uuid
+# Source: https://example.com
 
-campo1="valor1"
-campo2="valor2"
+field1="value1"
+field2="value2"
 ```
 
-## Ejemplos Completos
+---
 
-### Workflow Típico
+## Typical Workflow
 
+1. List resources:
+```bash
+docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --list
+```
 
-1. **Listar recursos para encontrar el ID:**
-   ```bash
-   docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --list
-   ```
+2. Download a specific resource:
+```bash
+docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download RESOURCE_ID -e
+```
 
-2. **Descargar recurso específico:**
-   ```bash
-  docker run --rm -v ${PWD}/out:/app/out -v ${PWD}/private.key:/app/private.key --env-file .env passbolt-dwn --download 6aea0e9e-d76f-493f-81eb-d7df370df425 -e
-   ```
+3. Use variables:
+```bash
+source out/resource_xxx.env
+echo $field1
+```
 
-3. **Usar las variables:**
-   ```bash
-   source out/resource_abc123-def456-ghi789.env
-   echo $campo1
-   ```
+---
 
+## Security
 
-## Seguridad
+- Output files contain sensitive data
+- Restrict permissions on the `out/` directory
+- Do not commit `.env` files to version control
+- Consider using Docker secrets or vault solutions in production
 
-- Los archivos de salida contienen información sensible
-- Asegúrate de que el directorio `out/` tenga permisos restringidos
-- No commitees el archivo `.env` al control de versiones
-- Considera usar Docker secrets en producción
+---
 
-## Solución de Problemas
+## Troubleshooting
 
-### Error de autenticación GPG
-- Verifica que la clave privada esté completa en `PRIVATE_KEY`
-- Asegúrate de que el passphrase sea correcto
-- Confirma que la clave esté importada en tu cuenta de Passbolt
+### GPG authentication error
+- Ensure the private key is complete in `PRIVATE_KEY`
+- Verify the passphrase
+- Confirm the key is associated with your Passbolt account
 
-### Error de conexión
-- Verifica que `PASSBOLT_URL` sea accesible
-- Revisa si necesitas configurar certificados SSL
-- Comprueba conectividad de red
+### Missing fields
+- Ensure the resource has custom fields defined
+- Verify access permissions
 
-### Recurso no encontrado
-- Usa `--list` para verificar que el recurso existe
-- Confirma que tienes permisos para acceder al recurso
-- Verifica que el RESOURCE_ID sea correcto
+### Connection error
+- Check `PASSBOLT_URL`
+- Verify SSL configuration if needed
+- Test network connectivity
 
-## Ayuda
+### Resource not found
+- Use `--list` to confirm existence
+- Verify permissions
+- Check `RESOURCE_ID`
+
+---
+
+## Help
 
 ```bash
 docker run --rm passbolt-dwn --help
